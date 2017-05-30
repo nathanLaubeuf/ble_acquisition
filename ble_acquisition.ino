@@ -57,7 +57,7 @@ Adafruit_BluefruitLE_SPI ble(BLUEFRUIT_SPI_CS, BLUEFRUIT_SPI_IRQ, BLUEFRUIT_SPI_
 //******************************
 
 int digital_VCC_Pin[] = {5};            // digital VCC set using PWM pin
-int digital_GND_Pin = 12;           // digital GNDs set using PWM pin
+int digital_GND_Pin = 11;           // digital GNDs set using PWM pin
 // int voltref = 13;
 
 int sensorPinSens[] = {A0, A1, A2, A3, A4};     // ADC sensor inputs
@@ -85,7 +85,7 @@ bool reverse = 0; // Voltage direction
 // Benchmark
 //******************************
 
-// unsigned long time;
+unsigned long time;
 
 
 
@@ -95,6 +95,8 @@ bool reverse = 0; // Voltage direction
 void setup() {
   // while (!Serial);  // required for Flora & Micro
   delay(500);
+
+  analogReadResolution(12);
 
   // pinMode(voltref, OUTPUT);
   // digitalWrite(voltref, HIGH);
@@ -121,6 +123,7 @@ void setup() {
   }
   /* Disable command echo from Bluefruit */
   ble.echo(false);
+  
   Serial.println(F("Requesting Bluefruit info:"));
   /* Print Bluefruit information */
   ble.info();
@@ -187,21 +190,13 @@ void loop() {
       Serial.println(F("Error"));
     }
     if(interSend == 1){
+      //----------Benchmark------------
+      time = millis();
+      Serial.print(F("Start Read at : "));
+      Serial.println(time);
+      //-------------------------------
+
       interSend = 0;
-      // if(reverse == 0){
-      //   digitalWrite(digital_GND_Pin, LOW);
-      //   digitalWrite(digital_VCC_Pin, HIGH);
-      //   data.concat(reverse);
-      //   data += "|";
-      //   reverse = 1;
-      // }
-      // else{
-      //   digitalWrite(digital_VCC_Pin, LOW);
-      //   digitalWrite(digital_GND_Pin, HIGH);
-      //   data.concat(reverse);
-      //   data += "|";
-      //   reverse = 0;
-      // }
       data.concat(analogRead(sensorPinSens[0]));
       data += "|";
       data.concat(analogRead(sensorPinSens[1]));
@@ -213,16 +208,21 @@ void loop() {
       data.concat(analogRead(sensorPinSens[4]));
 
       //----------Benchmark------------
-      // time = millis();
-      // Serial.print(F("Read at : "));
-      // Serial.println(time);
+      time = millis();
+      Serial.print(F("Stop Read at : "));
+      Serial.println(time);
       //-------------------------------
       j++;
       if(j==5){
+        //----------Benchmark------------
+        time = millis();
+        Serial.print(F("Start Sent at : "));
+        Serial.println(time);
+        //-------------------------------
+
         data += " \n";
         ble.print("AT+BLEUARTTX=");
         ble.print(data);
-        ble.flush();
         // Serial.print(data);
         data = "";
         j = 0;
@@ -230,9 +230,9 @@ void loop() {
           errors -= 2;
         }
         //----------Benchmark------------
-        // time = millis();
-        // Serial.print(F("Sent at : "));
-        // Serial.println(time);
+        time = millis();
+        Serial.print(F("Stop Sent at : "));
+        Serial.println(time);
         //-------------------------------
       }
       else {
