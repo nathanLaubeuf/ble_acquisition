@@ -1,3 +1,17 @@
+/*********************************************************************
+ This is an example for our nRF51822 based Bluefruit LE modules
+
+ Pick one up today in the adafruit shop!
+
+ Adafruit invests time and resources providing this open source code,
+ please support Adafruit and open-source hardware by purchasing
+ products from Adafruit!
+
+ MIT license, check LICENSE for more information
+ All text above, and the splash screen below must be included in
+ any redistribution
+*********************************************************************/
+
 #include <Arduino.h>
 #include <SPI.h>
 #if not defined (_VARIANT_ARDUINO_DUE_X_) && not defined (_VARIANT_ARDUINO_ZERO_)
@@ -9,6 +23,10 @@
 #include "Adafruit_BluefruitLE_UART.h"
 
 #include "BluefruitConfig.h"
+
+#include <SimpleFIFO.h>
+
+#include "ATSAMD21_ADC.h"
 
 #include "timerSetup.h"
 
@@ -56,52 +74,53 @@ Adafruit_BluefruitLE_SPI ble(BLUEFRUIT_SPI_CS, BLUEFRUIT_SPI_IRQ, BLUEFRUIT_SPI_
 // Sensors parameters
 //******************************
 
-int digital_VCC_Pin[] = {5};            // digital VCC set using PWM pin
+int digital_VCC_Pin = 5;            // digital VCC set using PWM pin
 int digital_GND_Pin = 11;           // digital GNDs set using PWM pin
 // int voltref = 13;
 
-int sensorPinSens[] = {A0, A1, A2, A3, A4};     // ADC sensor inputs
+int sensorPinSens[] = {A0, A1, A2, A3, A4, A5, 9};     // ADC sensor inputs
 
-int measure = 0;
+int freq = 80;                      // frequency
 
-int freq = 50;                      // frequency
+//******************************
+// Runtime parameters
+//******************************
 
-int i = 0;                          // counter
-int j = 0;                          // counter`
-int errors = 0;
-
-
-void error(const __FlashStringHelper*err) {
-  // Serial.println(err);
-  while (1);
-}
+// int errors = 0;
 
 bool acquire = 0; // acquisition flag
-String data = ""; // Data string to be sent via ble UART
+
 bool interSend = 0; // Flag to send the datas every N acquisition cycle
+
 bool reverse = 0; // Voltage direction
+
+// ADC valueswill be written in this variable
+unsigned int measure = 0;
+unsigned int tosend = 0;
+
+int i = 0;
+
 
 //******************************
 // Benchmark
 //******************************
 
 unsigned long time;
+unsigned long timed[2] = {0, 0};
 
+SimpleFIFO<unsigned int,100> sFIFO;
 
+void error(const __FlashStringHelper*err) {
+  // Serial.println(err);
+  while (1);
+}
 
 //******************************
 // Setup
 //******************************
 void setup() {
-  // while (!Serial);  // required for Flora & Micro
-  delay(500);
 
-  analogReadResolution(12);
-
-  // pinMode(voltref, OUTPUT);
-  // digitalWrite(voltref, HIGH);
-  //
-  // analogReference(AR_EXTERNAL);
+  analogPrescaler(ADC_PRESCALER_DIV16);
 
   Serial.println(F("----------BLE ADC acquisition----------"));
   Serial.println(F("---------------------------------------"));
@@ -110,11 +129,15 @@ void setup() {
   // Initialization BLE Module
   //------------------------------
   Serial.print(F("Initialising the Bluefruit LE module: "));
-  if ( !ble.begin(VERBOSE_MODE) ){
+
+  if ( !ble.begin(VERBOSE_MODE) )
+  {
     error(F("Couldn't find Bluefruit, make sure it's in CoMmanD mode & check wiring?"));
   }
   Serial.println( F("OK!") );
-  if ( FACTORYRESET_ENABLE ){
+
+  if ( FACTORYRESET_ENABLE )
+  {
     /* Perform a factory reset to make sure everything is in a known state */
     Serial.println(F("Performing a factory reset: "));
     if ( ! ble.factoryReset() ){
@@ -123,12 +146,11 @@ void setup() {
   }
   /* Disable command echo from Bluefruit */
   ble.echo(false);
-  
+
   Serial.println(F("Requesting Bluefruit info:"));
   /* Print Bluefruit information */
   ble.info();
-  Serial.println(F("UART mode activated"));
-  // Serial.println();
+
   ble.verbose(false);  // debug info is a little annoying after this point!
 
   //------------------------------
@@ -136,18 +158,10 @@ void setup() {
   //------------------------------
 
   //initialize digital digital_VCC_Pin
-  pinMode(digital_VCC_Pin[0], OUTPUT);
-  // pinMode(digital_VCC_Pin[1], OUTPUT);
-  // pinMode(digital_VCC_Pin[2], OUTPUT);
-  digitalWrite(digital_VCC_Pin[0], HIGH);
-  // digitalWrite(digital_VCC_Pin[1], HIGH);
-  // digitalWrite(digital_VCC_Pin[2], HIGH);
+  pinMode(digital_VCC_Pin, OUTPUT);
+  digitalWrite(digital_VCC_Pin, HIGH);
   pinMode(digital_GND_Pin, OUTPUT);
   digitalWrite(digital_GND_Pin, LOW);
-
-  for(i=0;i<10;i++){
-    data[i] = 0;
-  }
 
   //------------------------------
   // Setup Timer
@@ -161,98 +175,73 @@ void setup() {
   while (! ble.isConnected()) {
       delay(500);
   }
-  // LED Activity command is only supported from 0.6.6
-  if ( ble.isVersionAtLeast(MINIMUM_FIRMWARE_VERSION) ){
-    // Change Mode LED Activity
-    Serial.println(F("******************************"));
-    Serial.println(F("Change LED activity to " MODE_LED_BEHAVIOUR));
-    ble.sendCommandCheckOK("AT+HWModeLED=" MODE_LED_BEHAVIOUR);
-    Serial.println(F("******************************"));
-    Serial.println(F("Waiting for request"));
-  }
+
+  Serial.println(F("******************************"));
+
+    // LED Activity command is only supported from 0.6.6
+    if ( ble.isVersionAtLeast(MINIMUM_FIRMWARE_VERSION) )
+    {
+      // Change Mode LED Activity
+      Serial.println(F("Change LED activity to " MODE_LED_BEHAVIOUR));
+      ble.sendCommandCheckOK("AT+HWModeLED=" MODE_LED_BEHAVIOUR);
+    }
 }
+
 
 //******************************
 // loop
 //******************************
 void loop() {
   // Check for incoming characters from Bluefruit
-  ble.println("AT+BLEUARTRX");
-  ble.readline();
+  // Timer reliablility monitoring
+  // timed[1] = timed[0];
+  // timed[0] = millis();
+  // Serial.println(timed[0]-timed[1]);
+
+  // Debug not stuck in interrupt
+  // Serial.println(F("Loop"));
+
   if (acquire == 1){
-    if (strcmp(ble.buffer, "STOP") == 0 || errors >= 20) {
-      //Disable timer interrupts
+    if(ble.available()){
+      ble.readline();
+    }
+
+    if (strcmp(ble.buffer, "STOP") == 0) {
       acquire = 0;
       Serial.println(F("Acquisition Stop"));
+      // The +++ command switches between command and data mode
+      ble.println("+++");
+      Serial.println("Stopped");
     }
-    if(strcmp(ble.buffer, "ERROR") == 0){
-      errors += 4;
-      Serial.println(F("Error"));
+
+    i=0;
+    while(sFIFO.count()!= 0){
+      tosend = sFIFO.dequeue();
+      // Serial.println(tosend & 1023);
+      ble.write(highByte(tosend));
+      ble.write(lowByte(tosend));
+      i++;
     }
-    if(interSend == 1){
-      //----------Benchmark------------
-      time = millis();
-      Serial.print(F("Start Read at : "));
-      Serial.println(time);
-      //-------------------------------
 
-      interSend = 0;
-      data.concat(analogRead(sensorPinSens[0]));
-      data += "|";
-      data.concat(analogRead(sensorPinSens[1]));
-      data += "|";
-      data.concat(analogRead(sensorPinSens[2]));
-      data += "|";
-      data.concat(analogRead(sensorPinSens[3]));
-      data += "|";
-      data.concat(analogRead(sensorPinSens[4]));
-
-      //----------Benchmark------------
-      time = millis();
-      Serial.print(F("Stop Read at : "));
-      Serial.println(time);
-      //-------------------------------
-      j++;
-      if(j==5){
-        //----------Benchmark------------
-        time = millis();
-        Serial.print(F("Start Sent at : "));
-        Serial.println(time);
-        //-------------------------------
-
-        data += " \n";
-        ble.print("AT+BLEUARTTX=");
-        ble.print(data);
-        // Serial.print(data);
-        data = "";
-        j = 0;
-        if(errors != 0){
-          errors -= 2;
-        }
-        //----------Benchmark------------
-        time = millis();
-        Serial.print(F("Stop Sent at : "));
-        Serial.println(time);
-        //-------------------------------
-      }
-      else {
-        data += " ";
-      }
-    }
   }
-  if (acquire == 0) {
+  else{
+    ble.println("AT+BLEUARTRX");
+    ble.readline();
     if (strcmp(ble.buffer, "START") == 0) {
-      //Enable timer interrupts
-      errors = 0;
-      acquire = 1;
       Serial.println(F("Acquisition Start"));
+      // Set module to DATA mode
+      // The +++ command switches between command and data mode
+      ble.println("+++");
+      //Enable timer interrupts
+      acquire = 1;
     }
   }
-  if (strcmp(ble.buffer, "OK") != 0) {
-    Serial.print(F("[Recv] "));
-    Serial.println(ble.buffer);
-    // ble.waitForOK();
-  }
+
+  // if(interSend == 1){
+  //   interSend = 0;
+  //
+  // }
+
 }
 
 //******************************
@@ -261,28 +250,64 @@ void loop() {
 
 void TC3_Handler() {
   TcCount16* TC = (TcCount16*) TC3;
+  // timed[1] = timed[0];
+  // timed[0] = millis();
+  // Serial.println(timed[0]-timed[1]);
   // If this interrupt is due to the compare register matching the timer count
   if (TC->INTFLAG.bit.MC0 == 1) {
     TC->INTFLAG.bit.MC0 = 1;
-    interSend = 1;
+    // timed[1] = timed[0];
+    // timed[0] = millis();
+    // Serial.println(timed[0]-timed[1]);
+    // Debug interupt executed
+    // Serial.println(F("Interrupt"));
+    // Timer reliablility monitoring
+    // interSend = 1;
     if(reverse == 0){
+      // Debug interupt executed
+      // Serial.println(F("Interrupt 0"));
       digitalWrite(digital_GND_Pin, LOW);
-      digitalWrite(digital_VCC_Pin[0], HIGH);
-      // digitalWrite(digital_VCC_Pin[1], HIGH);
-      // digitalWrite(digital_VCC_Pin[2], HIGH);
-      data.concat(reverse);
-      data += "|";
+      digitalWrite(digital_VCC_Pin, HIGH);
+      measure = analogRead(sensorPinSens[0]) + 0;
+      sFIFO.enqueue(measure);
+      // Serial.print("Measured");
+      // Serial.println(measure);
+      measure = analogRead(sensorPinSens[1]) + (17<<10);
+      sFIFO.enqueue(measure);
+      measure = analogRead(sensorPinSens[2]) + (18<<10);
+      sFIFO.enqueue(measure);
+      measure = analogRead(sensorPinSens[3]) + (3<<10);
+      sFIFO.enqueue(measure);
+      measure = analogRead(sensorPinSens[4]) + (20<<10);
+      sFIFO.enqueue(measure);
+      measure = analogRead(sensorPinSens[5]) + (5<<10);
+      sFIFO.enqueue(measure);
+      measure = analogRead(sensorPinSens[6]) + (6<<10);
+      sFIFO.enqueue(measure);
       reverse = 1;
     }
     else{
-      digitalWrite(digital_VCC_Pin[0], LOW);
-      // digitalWrite(digital_VCC_Pin[1], LOW);
-      // digitalWrite(digital_VCC_Pin[2], LOW);
+      // Debug interupt executed
+      // Serial.println(F("Interrupt 1"));
+      digitalWrite(digital_VCC_Pin, LOW);
       digitalWrite(digital_GND_Pin, HIGH);
-      data.concat(reverse);
-      data += "|";
+      measure = analogRead(sensorPinSens[0]) + (48<<10);
+      sFIFO.enqueue(measure);
+      // Serial.print("Measured");
+      // Serial.println(measure - (48<<10));
+      measure = analogRead(sensorPinSens[1]) + (33<<10);
+      sFIFO.enqueue(measure);
+      measure = analogRead(sensorPinSens[2]) + (34<<10);
+      sFIFO.enqueue(measure);
+      measure = analogRead(sensorPinSens[3]) + (51<<10);
+      sFIFO.enqueue(measure);
+      measure = analogRead(sensorPinSens[4]) + (36<<10);
+      sFIFO.enqueue(measure);
+      measure = analogRead(sensorPinSens[5]) + (53<<10);
+      sFIFO.enqueue(measure);
+      measure = analogRead(sensorPinSens[6]) + (54<<10);
+      sFIFO.enqueue(measure);
       reverse = 0;
     }
   }
-  REG_TC3_INTFLAG = TC_INTFLAG_MC0;
 }
