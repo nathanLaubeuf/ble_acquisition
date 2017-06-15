@@ -98,7 +98,7 @@ int startTimer(int freq);
 // Sensors parameters
 //******************************
 
-int digital_VCC_Pin[] = {5};            // digital VCC set using PWM pin
+int digital_VCC_Pin = 5;            // digital VCC set using PWM pin
 int digital_GND_Pin = 3;           // digital GNDs set using PWM pin
 // int voltref = 13;
 
@@ -194,8 +194,8 @@ void setup() {
   //------------------------------
 
   //initialize digital digital_VCC_Pin
-  pinMode(digital_VCC_Pin[0], OUTPUT);
-  digitalWrite(digital_VCC_Pin[0], HIGH);
+  pinMode(digital_VCC_Pin, OUTPUT);
+  digitalWrite(digital_VCC_Pin, HIGH);
   pinMode(digital_GND_Pin, OUTPUT);
   digitalWrite(digital_GND_Pin, LOW);
 
@@ -318,7 +318,7 @@ ISR(TIMER1_COMPA_vect){
     // Debug interupt executed
     // Serial.println(F("Interrupt 0"));
     digitalWrite(digital_GND_Pin, LOW);
-    digitalWrite(digital_VCC_Pin[0], HIGH);
+    digitalWrite(digital_VCC_Pin, HIGH);
     measure = analogRead(sensorPinSens[0]) + 0;
     data->add(data, &measure);
     // Serial.print("Measured");
@@ -351,7 +351,7 @@ ISR(TIMER1_COMPA_vect){
   else{
     // Debug interupt executed
     // Serial.println(F("Interrupt 1"));
-    digitalWrite(digital_VCC_Pin[0], LOW);
+    digitalWrite(digital_VCC_Pin, LOW);
     digitalWrite(digital_GND_Pin, HIGH);
     measure = analogRead(sensorPinSens[0]) + (48<<10);
     data->add(data, &measure);
