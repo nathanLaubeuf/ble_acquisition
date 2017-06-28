@@ -74,8 +74,8 @@ Adafruit_BluefruitLE_SPI ble(BLUEFRUIT_SPI_CS, BLUEFRUIT_SPI_IRQ, BLUEFRUIT_SPI_
 // Sensors parameters
 //******************************
 
-int digital_VCC_Pin = 5;            // digital VCC set using PWM pin
-int digital_GND_Pin = 11;           // digital GNDs set using PWM pin
+int digital_VCC_Pin = 11;            // digital VCC set using PWM pin
+int digital_GND_Pin = 5;           // digital GNDs set using PWM pin
 // int voltref = 13;
 
 int sensorPinSens[] = {A0, A1, A2, A3, A4, A5, 9};     // ADC sensor inputs
