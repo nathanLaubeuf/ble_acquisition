@@ -341,11 +341,11 @@ ISR(TIMER1_COMPA_vect){
     data->add(data, &measure);
     measure = analogRead(sensorPinSens[9]) + (9<<10);
     data->add(data, &measure);
-    measure = analogRead(sensorPinSens[10]) + (10<<10);
-    data->add(data, &measure);
-    measure = analogRead(sensorPinSens[11]) + (27<<10);
+    // measure = analogRead(sensorPinSens[10]) + (10<<10);
+    // data->add(data, &measure);
+    // measure = analogRead(sensorPinSens[11]) + (27<<10);
     // Serial.println(measure - (27<<10));
-    data->add(data, &measure);
+    // data->add(data, &measure);
     reverse = 1;
   }
   else{
@@ -375,12 +375,12 @@ ISR(TIMER1_COMPA_vect){
     data->add(data, &measure);
     measure = analogRead(sensorPinSens[9]) + (57<<10);
     data->add(data, &measure);
-    measure = analogRead(sensorPinSens[10]) + (58<<10);
-    data->add(data, &measure);
-    measure = analogRead(sensorPinSens[11]) + (43<<10);
-    // Serial.print("Measured");
-    // Serial.println(measure - (43<<10));
-    data->add(data, &measure);
+    // measure = analogRead(sensorPinSens[10]) + (58<<10);
+    // data->add(data, &measure);
+    // measure = analogRead(sensorPinSens[11]) + (43<<10);
+    // // Serial.print("Measured");
+    // // Serial.println(measure - (43<<10));
+    // data->add(data, &measure);
     reverse = 0;
   }
 }
