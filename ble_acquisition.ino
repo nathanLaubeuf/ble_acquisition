@@ -98,13 +98,13 @@ int startTimer(int freq);
 // Sensors parameters
 //******************************
 
-int digital_VCC_Pin = 5;            // digital VCC set using PWM pin
-int digital_GND_Pin = 3;           // digital GNDs set using PWM pin
+int digital_VCC_Pin = 3;            // digital VCC set using PWM pin
+int digital_GND_Pin = 5;           // digital GNDs set using PWM pin
 // int voltref = 13;
 
 int sensorPinSens[] = {A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11};     // ADC sensor inputs
 
-int freq = 40;                      // frequency
+int freq = 44;                      // frequency
 
 //******************************
 // Runtime parameters
