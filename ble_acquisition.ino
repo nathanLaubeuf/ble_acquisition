@@ -98,11 +98,11 @@ int startTimer(int freq);
 // Sensors parameters
 //******************************
 
-int digital_VCC_Pin = 3;            // digital VCC set using PWM pin
-int digital_GND_Pin = 5;           // digital GNDs set using PWM pin
+int digital_VCC_Pin = 5;            // digital VCC set using PWM pin
+int digital_GND_Pin = 4;           // digital GNDs set using PWM pin
 // int voltref = 13;
 
-int sensorPinSens[] = {A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11};     // ADC sensor inputs
+int sensorPinSens[] = {A7, A8, A9, A10, A0, A1, A2, A3, A4, A5, A6};     // ADC sensor inputs
 
 int freq = 44;                      // frequency
 
@@ -153,8 +153,8 @@ void setup() {
   // PS_16, PS_32, PS_64 or PS_128
   ADCSRA |= PS_64;    // set our own prescaler to 64
 
-  while (!Serial);  // required for Flora & Micro
-  delay(500);
+  // while (!Serial);  // required for Flora & Micro
+  // delay(500);
 
   // Serial.begin(115200);
 
@@ -288,7 +288,7 @@ int startTimer(int freq){
   TCCR1B = 0;// same for TCCR1B
   TCNT1  = 0;//initialize counter value to 0
   // set compare match register for 1hz increments
-  OCR1A = 16000000/1024/freq - 1;// = (16*10^6) / (2*50*1024) - 1 (OCR1A must be <65536)
+  OCR1A = 8000000/1024/freq - 1;// = (16*10^6) / (2*50*1024) - 1 (OCR1A must be <65536)
   // turn on CTC mode
   TCCR1B |= (1 << WGM12);
   // Set CS12 and CS10 bits for 1024 prescaler
