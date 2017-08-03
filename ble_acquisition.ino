@@ -102,7 +102,7 @@ int digital_VCC_Pin = 5;            // digital VCC set using PWM pin
 int digital_GND_Pin = 4;           // digital GNDs set using PWM pin
 // int voltref = 13;
 
-int sensorPinSens[] = {A7, A8, A9, A10, A0, A1, A2, A3, A4, A5, A6};     // ADC sensor inputs
+int sensorPinSens[] = {A7, A8, A9, A11, A0, A1, A2, A3, A4, A5, A6};     // ADC sensor inputs
 
 int freq = 44;                      // frequency
 
