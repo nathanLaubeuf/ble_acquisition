@@ -120,6 +120,7 @@ void error(const __FlashStringHelper*err) {
 //******************************
 void setup() {
 
+  // Set ADC prescaller t o16 to avoid noise
   analogPrescaler(ADC_PRESCALER_DIV16);
 
   Serial.println(F("----------BLE ADC acquisition----------"));
@@ -167,7 +168,6 @@ void setup() {
   // Setup Timer
   //------------------------------
   startTimer(freq);
-      /* Wait for connection */
 
   //------------------------------
   // Wait for ble connection
@@ -192,7 +192,7 @@ void setup() {
 // loop
 //******************************
 void loop() {
-  // Check for incoming characters from Bluefruit
+
   // Timer reliablility monitoring
   // timed[1] = timed[0];
   // timed[0] = millis();
@@ -203,6 +203,7 @@ void loop() {
 
   if (acquire == 1){
     if(ble.available()){
+      // Read order for app
       ble.readline();
     }
 
@@ -215,6 +216,7 @@ void loop() {
     }
 
     i=0;
+    // Empties Queue while it''s not empty
     while(sFIFO.count()!= 0){
       tosend = sFIFO.dequeue();
       // Serial.println(tosend & 1023);
@@ -225,6 +227,7 @@ void loop() {
 
   }
   else{
+    // Wait for order to start
     ble.println("AT+BLEUARTRX");
     ble.readline();
     if (strcmp(ble.buffer, "START") == 0) {
@@ -236,12 +239,6 @@ void loop() {
       acquire = 1;
     }
   }
-
-  // if(interSend == 1){
-  //   interSend = 0;
-  //
-  // }
-
 }
 
 //******************************
@@ -256,13 +253,14 @@ void TC3_Handler() {
   // If this interrupt is due to the compare register matching the timer count
   if (TC->INTFLAG.bit.MC0 == 1) {
     TC->INTFLAG.bit.MC0 = 1;
+
     // timed[1] = timed[0];
     // timed[0] = millis();
     // Serial.println(timed[0]-timed[1]);
     // Debug interupt executed
     // Serial.println(F("Interrupt"));
     // Timer reliablility monitoring
-    // interSend = 1;
+
     if(reverse == 0){
       // Debug interupt executed
       // Serial.println(F("Interrupt 0"));
