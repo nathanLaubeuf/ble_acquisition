@@ -98,9 +98,8 @@ int startTimer(int freq);
 // Sensors parameters
 //******************************
 
-int digital_VCC_Pin = 5;            // digital VCC set using PWM pin
-int digital_GND_Pin = 4;           // digital GNDs set using PWM pin
-// int voltref = 13;
+int digital_VCC_Pin = 5;            // digital VCC set using IO pin
+int digital_GND_Pin = 4;           // digital GNDs set using IO pin
 
 int sensorPinSens[] = {A7, A8, A9, A11, A0, A1, A2, A3, A4, A5, A6};     // ADC sensor inputs
 
@@ -114,10 +113,9 @@ int freq = 44;                      // frequency
 
 bool acquire = 0; // acquisition flag
 
-// bool interSend = 0; // Flag to send the datas every N acquisition cycle
-bool reverse = 0; // Voltage direction
+bool reverse = 0; // Current direction
 
-// ADC valueswill be written in this variable
+// ADC values will be written in this variable
 unsigned int measure = 0;
 unsigned int tosend = 0;
 
@@ -180,6 +178,10 @@ void setup() {
         error(F("Couldn't factory reset"));
       }
     }
+
+    // might be used to increase the frequency
+    // ble.sendCommandCheckOK("AT+BAUDRATE=9600");
+
     /* Disable command echo from Bluefruit */
     ble.echo(false);
 
@@ -199,9 +201,6 @@ void setup() {
   pinMode(digital_GND_Pin, OUTPUT);
   digitalWrite(digital_GND_Pin, LOW);
 
-  // for(i=0;i<10;i++){
-  //   data[i] = 0;
-  // }
 
   //------------------------------
   // Setup Timer
@@ -283,11 +282,11 @@ int startTimer(int freq){
   // Stop interrupts
   cli();
 
-  // Set timer1 interrupt at 1Hz
+  // Set timer1 interrupt at given frequency
   TCCR1A = 0;// set entire TCCR1A register to 0
   TCCR1B = 0;// same for TCCR1B
   TCNT1  = 0;//initialize counter value to 0
-  // set compare match register for 1hz increments
+  // set compare match register for required increments
   OCR1A = 8000000/1024/freq - 1;// = (16*10^6) / (2*50*1024) - 1 (OCR1A must be <65536)
   // turn on CTC mode
   TCCR1B |= (1 << WGM12);
@@ -313,7 +312,7 @@ ISR(TIMER1_COMPA_vect){
   // Debug interupt executed
   // Serial.println(F("Interrupt"));
   // Timer reliablility monitoring
-  // interSend = 1;
+
   if(reverse == 0){
     // Debug interupt executed
     // Serial.println(F("Interrupt 0"));
